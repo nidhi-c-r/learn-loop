@@ -50,9 +50,9 @@ def analyse_gaps(
     )
 
     prompt = f"""
-You are an expert educational evaluator.
+You are a strict academic evaluator.
 
-Analyse this student's explanation of: {topic}
+Evaluate the student's understanding of: {topic}
 
 Student Explanation:
 {explanation}
@@ -60,14 +60,24 @@ Student Explanation:
 Concept Coverage Scores:
 {scores_text}
 
+IMPORTANT RULES:
+- Be strict, not generous
+- If explanation is short, vague, incomplete, or missing technical depth → mark as NOT understood
+- Only mark understood=true if the student clearly explains the concept properly
+- Real conceptual gaps must be identified
+- For weak explanations, multiple gaps should appear
+- If the student gives only 1–2 lines, there should usually be several gaps
+- Do NOT praise weak answers too much
+
 Return ONLY valid JSON in this exact format:
+
 {{
   "topic": "{topic}",
   "overall_score": 0.0,
   "gaps": [
     {{
       "concept": "",
-      "understood": true,
+      "understood": false,
       "score": 0.0,
       "feedback": ""
     }}
@@ -160,22 +170,39 @@ def socratic_tutor(
     client = get_client()
 
     prompt = f"""
-You are a Socratic tutor for topic: {topic}
+You are an expert educational tutor using the Feynman Technique and Socratic Teaching.
 
-Student message:
+Your job is to HELP the student understand the topic deeply.
+
+Topic: {topic}
+
+Student Message:
 {user_message}
 
-Rules:
-- Never directly give answers
-- Ask guiding questions
-- Be concise and helpful
+IMPORTANT RULES:
+1. First answer the student's question clearly and directly
+2. Then explain in simple student-friendly words
+3. Then ask ONE follow-up question to test understanding
+4. Do NOT reply with vague phrases like:
+   - Let's explore that
+   - That's interesting
+   - Good start
+   - Tell me more
+5. Always provide actual teaching value
+6. Keep answers short, clear, and educational
+7. If the student is wrong, gently correct them
+8. If the student asks “why”, explain the reason properly
 
-Return ONLY valid JSON:
-{{
-  "reply": "",
-  "follow_up_question": "",
-  "nodes_improved": []
-}}
+GOOD EXAMPLE:
+
+Student: Why is air present on Earth?
+
+Tutor:
+Air exists on Earth because Earth's gravity holds gases around the planet, forming the atmosphere. Plants also help maintain oxygen through photosynthesis. Without gravity, these gases would escape into space.
+
+Now tell me — why do you think the Moon does not have much atmosphere?
+
+Return only the tutor reply text.
 """
 
     response = client.chat.completions.create(
@@ -186,15 +213,17 @@ Return ONLY valid JSON:
         temperature=0.4,
     )
 
-    content = response.choices[0].message.content
-    data = _parse_json(content)
+    # IMPORTANT:
+    # Do NOT use _parse_json() here
+    # because tutor returns plain text, not JSON
+
+    reply = response.choices[0].message.content.strip()
 
     return TutorResponse(
-        reply=data.get("reply", ""),
-        follow_up_question=data.get("follow_up_question"),
-        nodes_improved=data.get("nodes_improved", []),
+        reply=reply,
+        follow_up_question=None,
+        nodes_improved=[],
     )
-
 
 def infer_learning_style(explanations: list[str]) -> str:
     if not explanations:

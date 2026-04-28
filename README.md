@@ -15,7 +15,7 @@
 |---|---|
 | Frontend | Streamlit + pyvis |
 | Backend | FastAPI + uvicorn |
-| LLM | Claude claude-sonnet-4-20250514 via Anthropic SDK |
+| LLM | GroqAPI |
 | NLP | spaCy (en_core_web_sm) |
 | Embeddings | sentence-transformers (all-MiniLM-L6-v2) |
 | Graphs | NetworkX + pyvis |
@@ -43,7 +43,6 @@ venv\Scripts\activate
 streamlit run app.py
 ```
 
-Open http://localhost:8501
 
 ## Project Structure
 ```
